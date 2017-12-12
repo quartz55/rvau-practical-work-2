@@ -1,0 +1,9 @@
+name: rvau-pw-2
+channels:
+- conda-forge
+dependencies:
+- python=3.6
+- numpy
+- opencv
+- matplotlib
+- pyqt=5

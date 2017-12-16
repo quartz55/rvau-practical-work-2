@@ -3,43 +3,22 @@ import cv2
 import sys
 from matplotlib import pyplot as plt
 from PyQt5 import QtWidgets as qt, QtGui as gui
-
-resources = 'resources/'
-
-img = cv2.imread(resources + '/images/taj-mahal-1.jpg')
-
-# Initiate ORB detector
-orb = cv2.ORB_create()
-# find the keypoints with ORB
-kp = orb.detect(img, None)
-# compute the descriptors with ORB
-kp, des = orb.compute(img, kp)
-# draw only keypoints location,not size and orientation
-img2 = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0), flags=0)
-plt.imshow(img2)
-plt.show()
+from core import Image, Matcher
+from log import logger
+from gui.add_entry_window import AddEntryWindow
 
 
 class MainWindow(qt.QMainWindow):
 
     def __init__(self):
         super().__init__()
-
         self.initUI()
+        self.__entryWindow = None;
 
     def initUI(self):
-        self.setGeometry(300, 300, 250, 150)
         self.setWindowTitle('RVAU PW2')
         self.setGeometry(0, 0, 800, 400)
         self.center()
-
-        hbox = qt.QHBoxLayout()
-
-        lbl = qt.QLabel(self)
-        lbl.setPixmap(gui.QPixmap(resources + '/images/taj-mahal-1.jpg'))
-        hbox.addWidget(lbl)
-
-        self.setLayout(hbox)
 
         self.statusBar().showMessage('Ready')
 
@@ -60,6 +39,7 @@ class MainWindow(qt.QMainWindow):
         add_database_action = qt.QAction('Add Entry', self)
         add_database_action.setShortcut('Ctrl+Shift+A')
         add_database_action.setStatusTip('Add a new entry to the image database')
+        add_database_action.triggered.connect(self.open_add_entry_window)
         database_menu.addAction(add_database_action)
 
         menubar.addAction(database_menu.menuAction())
@@ -72,6 +52,13 @@ class MainWindow(qt.QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def open_add_entry_window(self):
+        logger.debug('Opening an add database entry window')
+        self.__entryWindow = AddEntryWindow()
+        self.__entryWindow.show()
+
+
+
     def closeEvent(self, event):
         reply = qt.QMessageBox.question(self, 'Message',
                                         "Are you sure to quit?", qt.QMessageBox.Yes |
@@ -83,6 +70,26 @@ class MainWindow(qt.QMainWindow):
             event.ignore()
 
 
-app = qt.QApplication(sys.argv)
-window = MainWindow()
-sys.exit(app.exec_())
+if __name__ == '__main__':
+    app = qt.QApplication(sys.argv)
+    window = MainWindow()
+    sys.exit(app.exec_())
+
+
+# matcher = Matcher()
+# img1 = Image.from_file('resources/images/westminster-abbey-1.jpg')
+#
+# plt.imshow(img1.grayscale, 'gray')
+# plt.show()
+# kp, des = matcher.features(Image(img1.grayscale))
+# print(len(kp), len(des))
+# plt.imshow(Image(cv2.drawKeypoints(img1.src, kp, None)).rgb)
+# plt.show()
+#
+# img1_heq = Matcher.histogram_equalization(img1)
+# plt.imshow(img1_heq.src, 'gray')
+# plt.show()
+# kp_heq, des_heq = matcher.features(img1_heq)
+# print(len(kp_heq), len(des_heq))
+# plt.imshow(Image(cv2.drawKeypoints(img1.src, kp_heq, None)).rgb)
+# plt.show()

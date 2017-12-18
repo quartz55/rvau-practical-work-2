@@ -2,8 +2,7 @@ import numpy as np
 import cv2
 import sys
 from matplotlib import pyplot as plt
-from PyQt5 import QtWidgets as qt, QtGui as gui
-from core import Image, Matcher
+from PyQt5 import QtWidgets as qt, QtGui as gui, QtCore as qtc
 from log import logger
 from gui.add_entry_window import AddEntryWindow
 
@@ -12,12 +11,14 @@ class MainWindow(qt.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.initUI()
-        self.__entryWindow = None;
+        self.init_ui()
+        self.__entryWindow = None
 
-    def initUI(self):
+    def init_ui(self):
         self.setWindowTitle('RVAU PW2')
         self.setGeometry(0, 0, 800, 400)
+        screen_size = gui.QGuiApplication.primaryScreen().availableSize()
+        self.resize(int(screen_size.width() * 3 / 5), int(screen_size.height() * 3 / 5))
         self.center()
 
         self.statusBar().showMessage('Ready')
@@ -25,14 +26,14 @@ class MainWindow(qt.QMainWindow):
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
 
-        fileMenu = menubar.addMenu('File')
+        file_menu = menubar.addMenu('File')
 
-        exitAction = qt.QAction('Quit', self)
-        exitAction.setShortcut('Ctrl+Q')
-        exitAction.setStatusTip('Quit application')
-        exitAction.triggered.connect(qt.qApp.quit)
-        fileMenu.addAction(exitAction)
-        menubar.addAction(fileMenu.menuAction())
+        exit_action = qt.QAction('Quit', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.setStatusTip('Quit application')
+        exit_action.triggered.connect(qt.qApp.quit)
+        file_menu.addAction(exit_action)
+        menubar.addAction(file_menu.menuAction())
 
         database_menu = menubar.addMenu('Database')
 
@@ -55,9 +56,9 @@ class MainWindow(qt.QMainWindow):
     def open_add_entry_window(self):
         logger.debug('Opening an add database entry window')
         self.__entryWindow = AddEntryWindow()
+        pos = self.frameGeometry().topLeft()
+        self.__entryWindow.move(pos.x() + 20, pos.y() + 20)
         self.__entryWindow.show()
-
-
 
     def closeEvent(self, event):
         reply = qt.QMessageBox.question(self, 'Message',
@@ -74,22 +75,3 @@ if __name__ == '__main__':
     app = qt.QApplication(sys.argv)
     window = MainWindow()
     sys.exit(app.exec_())
-
-
-# matcher = Matcher()
-# img1 = Image.from_file('resources/images/westminster-abbey-1.jpg')
-#
-# plt.imshow(img1.grayscale, 'gray')
-# plt.show()
-# kp, des = matcher.features(Image(img1.grayscale))
-# print(len(kp), len(des))
-# plt.imshow(Image(cv2.drawKeypoints(img1.src, kp, None)).rgb)
-# plt.show()
-#
-# img1_heq = Matcher.histogram_equalization(img1)
-# plt.imshow(img1_heq.src, 'gray')
-# plt.show()
-# kp_heq, des_heq = matcher.features(img1_heq)
-# print(len(kp_heq), len(des_heq))
-# plt.imshow(Image(cv2.drawKeypoints(img1.src, kp_heq, None)).rgb)
-# plt.show()

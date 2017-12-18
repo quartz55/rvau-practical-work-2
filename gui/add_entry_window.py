@@ -1,12 +1,12 @@
 import os
 
+from log import logger
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
 
 from core import Image
-from gui.entry_editor import EntryEditor
-from log import logger
+from gui.entry_editor_scene import EntryEditor
 
 
 class AddEntryWindow(qt.QMainWindow):
@@ -21,7 +21,8 @@ class AddEntryWindow(qt.QMainWindow):
 
     def configure_window(self):
         self.setWindowTitle('New Database Entry')
-        self.setGeometry(0, 0, 800, 400)
+        screen_size = gui.QGuiApplication.primaryScreen().availableSize()
+        self.resize(int(screen_size.width() * 3 / 5), int(screen_size.height() * 3 / 5))
 
     def configure_toolbar(self):
         self.toolbar: qt.QToolBar = self.addToolBar('Main Toolbar')

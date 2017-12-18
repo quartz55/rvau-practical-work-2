@@ -4,32 +4,26 @@ from PyQt5 import (QtWidgets as qt,
                    QtCore as qtc)
 
 from core import Image, Matcher
+import cv2
 
 
-class EntryEditor(qt.QWidget):
+class EntryEditorScene(qt.QGraphicsScene):
     entry_changed = qtc.pyqtSignal()
 
     def __init__(self):
         super().__init__()
         self.entry: dict = None
         self.__matcher: Matcher = Matcher()
-        self.__scene = qt.QGraphicsScene()
-        self.__view = qt.QGraphicsView(self.__scene)
-
-        v_layout = qt.QVBoxLayout()
-        v_layout.addWidget(self.__view)
-
-        self.setLayout(v_layout)
 
     def load_entry(self, img: Image):
         assert type(img) is Image
         h, w, d = img.dimensions
         q_image = gui.QImage(img.rgb, w, h, w * d, gui.QImage.Format_RGB888)
+        self.__scene.clear()
         self.__scene.addPixmap(gui.QPixmap(q_image))
         self.__scene.update()
-        self.__view.fitInView(qtc.QRectF(0, 0, w, h), qtc.Qt.KeepAspectRatio)
-        self.entry = dict(img=img,
-                          id=None)
+        self.__view.fitInView(self.__scene.itemsBoundingRect(), qtc.Qt.KeepAspectRatio)
+        self.entry = {'img': img, 'id': None}
         self.entry_changed.emit()
 
     def calculate_features(self):
@@ -39,4 +33,10 @@ class EntryEditor(qt.QWidget):
             kp, des = self.__matcher.features(processed)
             logger.info('Found %d features', len(kp))
             for keypoint in kp:
-                
+                x, y = keypoint.pt
+                self.__scene.addEllipse(x, y, 5, 5, qtc.Qt.darkRed)
+
+            self.__scene.update()
+
+    def resizeEvent(self, event: gui.QResizeEvent):
+        self.__view.fitInView(self.__scene.itemsBoundingRect(), qtc.Qt.KeepAspectRatio)

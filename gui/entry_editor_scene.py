@@ -1,10 +1,18 @@
-from log import logger
+from enum import Enum, unique, auto
+
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
+from PyQt5.QtCore import Qt
 
-from core import Image, Matcher
-import cv2
+from core import Image
+from log import logger
+
+
+@unique
+class EntryEditorState(Enum):
+    NONE = auto()
+    SELECT_FEATURES = auto()
 
 
 class EntryEditorScene(qt.QGraphicsScene):
@@ -13,30 +21,51 @@ class EntryEditorScene(qt.QGraphicsScene):
     def __init__(self):
         super().__init__()
         self.entry: dict = None
-        self.__matcher: Matcher = Matcher()
+        self.features = []
+        self._selection_rect: dict = None
+        self._selection_rect_ui: qt.QGraphicsRectItem = None
 
     def load_entry(self, img: Image):
         assert type(img) is Image
         h, w, d = img.dimensions
         q_image = gui.QImage(img.rgb, w, h, w * d, gui.QImage.Format_RGB888)
-        self.__scene.clear()
-        self.__scene.addPixmap(gui.QPixmap(q_image))
-        self.__scene.update()
-        self.__view.fitInView(self.__scene.itemsBoundingRect(), qtc.Qt.KeepAspectRatio)
+        self.clear()
+        self.addPixmap(gui.QPixmap(q_image))
+        self.update()
         self.entry = {'img': img, 'id': None}
         self.entry_changed.emit()
 
-    def calculate_features(self):
-        if self.entry is not None:
-            img = self.entry.get('img')
-            processed = self.__matcher.histogram_equalization(img)
-            kp, des = self.__matcher.features(processed)
-            logger.info('Found %d features', len(kp))
-            for keypoint in kp:
-                x, y = keypoint.pt
-                self.__scene.addEllipse(x, y, 5, 5, qtc.Qt.darkRed)
+    def add_features(self, features):
+        pass
 
-            self.__scene.update()
+    def mousePressEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        if event.button() == Qt.LeftButton:
+            pos = event.scenePos()
+            self._selection_rect = {'from': (pos.x(), pos.y()), 'to': (pos.x(), pos.y())}
+            self.update_selection_rect()
 
-    def resizeEvent(self, event: gui.QResizeEvent):
-        self.__view.fitInView(self.__scene.itemsBoundingRect(), qtc.Qt.KeepAspectRatio)
+    def mouseReleaseEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        if self._selection_rect is not None:
+            self._selection_rect = None
+            self.removeItem(self._selection_rect_ui)
+            self._selection_rect_ui = None
+
+    def mouseMoveEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        if self._selection_rect is not None:
+            new_x, new_y = event.scenePos().x(), event.scenePos().y()
+            self._selection_rect['to'] = (new_x, new_y)
+            self.update_selection_rect()
+
+    def update_selection_rect(self):
+        if self._selection_rect is not None:
+            a, b = self._selection_rect['from'], self._selection_rect['to']
+            top_left = qtc.QPointF(min(a[0], b[0]), min(a[1], b[1]))
+            bottom_right = qtc.QPointF(max(a[0], b[0]), max(a[1], b[1]))
+            rect = qtc.QRectF(top_left, bottom_right)
+            if self._selection_rect_ui is None:
+                self._selection_rect_ui = self.addRect(rect)
+                pen = gui.QPen(Qt.black, 1, Qt.CustomDashLine)
+                pen.setDashPattern([4, 4])
+                self._selection_rect_ui.setPen(pen)
+            else:
+                self._selection_rect_ui.setRect(rect)

@@ -4,6 +4,6 @@ from PyQt5 import (QtWidgets as qt,
                    QtCore as qtc)
 
 
-class KeypointItem(qt.QGraphicsItem):
+class FeatureItem(qt.QGraphicsItem):
     def __init__(self):
         super().__init__()

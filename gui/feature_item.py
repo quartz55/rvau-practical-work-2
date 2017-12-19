@@ -12,6 +12,7 @@ class FeatureItem(qt.QGraphicsItem):
         self.diameter = 5
         self.feature: Feature = feature
         self.setFlag(qt.QGraphicsItem.ItemIsSelectable)
+        self.setCursor(qtc.Qt.PointingHandCursor)
 
     @property
     def position(self) -> typing.Tuple[float, float]:

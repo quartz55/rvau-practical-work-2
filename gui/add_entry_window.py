@@ -1,11 +1,13 @@
 import os
 
-from log import logger
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
+
 from core import Image, Matcher
 from gui.entry_editor_scene import EntryEditorScene
+from gui.entry_editor_view import EntryEditorView
+from log import logger
 
 
 class AddEntryWindow(qt.QMainWindow):
@@ -19,13 +21,14 @@ class AddEntryWindow(qt.QMainWindow):
 
         self.editor_scene = EntryEditorScene()
         self.editor_scene.entry_changed.connect(self.on_entry_change)
-        self.editor_view = qt.QGraphicsView(self.editor_scene)
+        self.editor_view = EntryEditorView(self.editor_scene)
         self.setCentralWidget(self.editor_view)
 
     def configure_window(self):
         self.setWindowTitle('New Database Entry')
         screen_size = gui.QGuiApplication.primaryScreen().availableSize()
         self.resize(int(screen_size.width() * 3 / 5), int(screen_size.height() * 3 / 5))
+        self.grabGesture(qtc.Qt.PinchGesture)
 
     def configure_toolbar(self):
         self.toolbar = self.addToolBar('Main Toolbar')
@@ -44,11 +47,30 @@ class AddEntryWindow(qt.QMainWindow):
         self.tool_features = features_action
         self.toolbar.addAction(features_action)
 
+        zoom_in_act = qt.QAction('Zoom In', self)
+        zoom_in_act.setShortcut('Ctrl++')
+        zoom_in_act.setToolTip('Zoom in')
+        zoom_in_act.triggered.connect(lambda: self.editor_view.scale(1.25, 1.25))
+        self.toolbar.addAction(zoom_in_act)
+
+        zoom_out_act = qt.QAction('Zoom Out', self)
+        zoom_out_act.setShortcut('Ctrl+-')
+        zoom_out_act.setToolTip('Zoom Out')
+        zoom_out_act.triggered.connect(lambda: self.editor_view.scale(0.75, 0.75))
+        self.toolbar.addAction(zoom_out_act)
+
+        reset_zoom_act = qt.QAction('Reset Zoom', self)
+        reset_zoom_act.setShortcut('Ctrl+0')
+        reset_zoom_act.setToolTip('Reset Zoom')
+        reset_zoom_act.triggered.connect(lambda: self.editor_view.fit_to_entry())
+        self.toolbar.addAction(reset_zoom_act)
+
     def load_image(self):
         filename, __ = qt.QFileDialog.getOpenFileName(self, 'Load Image', os.environ.get('HOME'), 'Image files (*.jpg)')
-        logger.debug('Trying to load image: %s', filename)
-        image = Image.from_file(filename)
-        self.editor_scene.load_entry(image)
+        if filename:
+            logger.debug('Trying to load image: %s', filename)
+            image = Image.from_file(filename)
+            self.editor_scene.load_entry(image)
 
     def calculate_features(self):
         entry = self.editor_scene.entry

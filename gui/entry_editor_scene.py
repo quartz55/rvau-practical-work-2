@@ -30,9 +30,12 @@ class EntryEditorScene(qt.QGraphicsScene):
         h, w, d = img.dimensions
         q_image = gui.QImage(img.rgb, w, h, w * d, gui.QImage.Format_RGB888)
         self.clear()
-        self.addPixmap(gui.QPixmap(q_image))
+        entry_item = self.addPixmap(gui.QPixmap(q_image))
+        self.setSceneRect(entry_item.boundingRect())
         self.update()
-        self.entry = {'img': img, 'id': None}
+        self.entry = {'id': None,
+                      'img': img,
+                      'gui': entry_item}
         self.entry_changed.emit()
 
     def add_features(self, features: List[Feature]):

@@ -1,7 +1,9 @@
+from log import logger
+from typing import Tuple, List, Iterator
 import cv2
 import numpy as np
 from core.image import Image
-from log import logger
+from core.feature import Feature
 
 FLANN_INDEX_KDTREE = 1
 FLANN_INDEX_LSH = 6
@@ -14,12 +16,15 @@ class Matcher:
         # surf = cv2.xfeatures2d.SURF_create(100)
         self.__orb = cv2.ORB_create(nfeatures=1000)
 
-    def features(self, img):
-        assert type(img) is Image
-        return self.__orb.detectAndCompute(img.src, None)
+    def features(self, img: Image) -> List[Feature]:
+        key_points, descriptors = self.__orb.detectAndCompute(img.src, None)
+        final = []
+        for kp, des in zip(key_points, descriptors):
+            final.append(Feature(kp, des))
+        return final
 
     @staticmethod
-    def histogram_equalization(img):
+    def histogram_equalization(img: Image) -> Image:
         # create a CLAHE object (Arguments are optional).
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(2, 2))
         equalized = clahe.apply(img.grayscale)

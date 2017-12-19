@@ -40,6 +40,7 @@ class AddEntryWindow(qt.QMainWindow):
         features_action.setShortcut('Ctrl+F')
         features_action.setToolTip('Calculates feature for current image')
         features_action.setDisabled(True)
+        features_action.triggered.connect(self.calculate_features)
         self.tool_features = features_action
         self.toolbar.addAction(features_action)
 
@@ -50,8 +51,12 @@ class AddEntryWindow(qt.QMainWindow):
         self.editor_scene.load_entry(image)
 
     def calculate_features(self):
-        if self.editor_scene.entry is None:
+        entry = self.editor_scene.entry
+        if entry is None:
             return
+        eq = self.matcher.histogram_equalization(entry['img'])
+        features = self.matcher.features(eq)
+        self.editor_scene.add_features(features)
 
     def on_entry_change(self):
         logger.debug('Entry changed'),

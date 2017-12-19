@@ -1,12 +1,12 @@
+from log import logger
+from typing import List
 from enum import Enum, unique, auto
-
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
 from PyQt5.QtCore import Qt
-
-from core import Image
-from log import logger
+from core import Image, Feature
+from gui.feature_item import FeatureItem
 
 
 @unique
@@ -21,7 +21,7 @@ class EntryEditorScene(qt.QGraphicsScene):
     def __init__(self):
         super().__init__()
         self.entry: dict = None
-        self.features = []
+        self.features: List[FeatureItem] = []
         self._selection_rect: dict = None
         self._selection_rect_ui: qt.QGraphicsRectItem = None
 
@@ -35,8 +35,13 @@ class EntryEditorScene(qt.QGraphicsScene):
         self.entry = {'img': img, 'id': None}
         self.entry_changed.emit()
 
-    def add_features(self, features):
-        pass
+    def add_features(self, features: List[Feature]):
+        for f in features:
+            feature_item = FeatureItem(f)
+            feature_item.setPos(*feature_item.position)
+            self.addItem(feature_item)
+            self.features.append(FeatureItem(f))
+        self.update()
 
     def mousePressEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if event.button() == Qt.LeftButton:
@@ -69,3 +74,7 @@ class EntryEditorScene(qt.QGraphicsScene):
                 self._selection_rect_ui.setPen(pen)
             else:
                 self._selection_rect_ui.setRect(rect)
+
+            selection_path = gui.QPainterPath()
+            selection_path.addRect(rect)
+            self.setSelectionArea(selection_path)

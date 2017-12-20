@@ -27,13 +27,14 @@ class EntryEditorView(qt.QGraphicsView):
         self.resetTransform()
 
     def resizeEvent(self, event: gui.QResizeEvent):
-        if self.editor_scene.entry is not None:
-            entry_ui: qt.QGraphicsItem = self.editor_scene.entry['gui']
-            entry_rect: qtc.QRectF = entry_ui.boundingRect()
-            entry_ratio = entry_rect.width() / entry_rect.height()
-            screen_ratio = event.size().width() / event.size().height()
-            factor = event.size().height() / event.oldSize().height() if screen_ratio > entry_ratio else event.size().width() / event.oldSize().width()
-            self.scale(factor, factor)
+        self.fit_to_entry()
+        # if self.editor_scene.entry is not None:
+        #     entry_ui: qt.QGraphicsItem = self.editor_scene.entry['gui']
+        #     entry_rect: qtc.QRectF = entry_ui.boundingRect()
+        #     entry_ratio = entry_rect.width() / entry_rect.height()
+        #     screen_ratio = event.size().width() / event.size().height()
+        #     factor = event.size().height() / event.oldSize().height() if screen_ratio > entry_ratio else event.size().width() / event.oldSize().width()
+        #     self.scale(factor, factor)
         super().resizeEvent(event)
 
     def viewportEvent(self, event: qtc.QEvent):

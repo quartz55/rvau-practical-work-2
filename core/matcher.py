@@ -16,8 +16,11 @@ class Matcher:
         # surf = cv2.xfeatures2d.SURF_create(100)
         self.__orb = cv2.ORB_create(nfeatures=1000)
 
+    def features_raw(self, img: Image) -> Tuple[List[cv2.KeyPoint], np.ndarray]:
+        return self.__orb.detectAndCompute(img.src, None)
+
     def features(self, img: Image) -> List[Feature]:
-        key_points, descriptors = self.__orb.detectAndCompute(img.src, None)
+        key_points, descriptors = self.features_raw(img)
         final = []
         for kp, des in zip(key_points, descriptors):
             final.append(Feature(kp, des))

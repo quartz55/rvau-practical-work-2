@@ -23,7 +23,16 @@ class FeatureItem(qt.QGraphicsItem):
         if self.isSelected():
             color = qtc.Qt.green
         painter.setBrush(color)
-        painter.drawEllipse(0, 0, self.diameter, self.diameter)
+        painter.drawEllipse(self.boundingRect())
+
+    def mousePressEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        pass
+
+    def mouseReleaseEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        pass
+
+    def mouseDoubleClickEvent(self, event: qt.QGraphicsSceneMouseEvent):
+        pass
 
     def boundingRect(self) -> qtc.QRectF:
         return qtc.QRectF(-self.diameter/2, -self.diameter/2, self.diameter, self.diameter)

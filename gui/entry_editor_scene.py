@@ -23,6 +23,7 @@ class EntryEditorScene(qt.QGraphicsScene):
         self.entry: dict = None
         self.features: List[FeatureItem] = []
         self.state: EntryEditorState = EntryEditorState.NONE
+        self._clicked: List[FeatureItem] = []
         self._selection_rect: dict = None
         self._selection_rect_ui: qt.QGraphicsRectItem = None
 
@@ -68,6 +69,7 @@ class EntryEditorScene(qt.QGraphicsScene):
         if event.button() == Qt.LeftButton:
             pos = event.scenePos()
             if self.state == EntryEditorState.SELECT_FEATURES:
+                self._clicked = list(filter(lambda i: type(i) is FeatureItem, self.items(pos)))
                 self._selection_rect = {'from': (pos.x(), pos.y()), 'to': (pos.x(), pos.y())}
                 self.update_selection_rect()
 
@@ -78,10 +80,14 @@ class EntryEditorScene(qt.QGraphicsScene):
             bottom_right = qtc.QPointF(max(a[0], b[0]), max(a[1], b[1]))
             rect = qtc.QRectF(top_left, bottom_right)
             in_selection = self.items(rect)
-            if not event.modifiers() & Qt.ControlModifier:
+            in_selection.extend(self._clicked)
+            self._clicked.clear()
+            ctrl = event.modifiers() & Qt.ControlModifier
+            shift = event.modifiers() & Qt.ShiftModifier
+            if not ctrl:
                 self.clearSelection()
             for selected in in_selection:
-                selected.setSelected(True)
+                selected.setSelected(not shift)
             self._selection_rect = None
             self.removeItem(self._selection_rect_ui)
             self._selection_rect_ui = None
@@ -103,7 +109,7 @@ class EntryEditorScene(qt.QGraphicsScene):
             if self._selection_rect_ui is None:
                 self._selection_rect_ui = self.addRect(rect)
                 self._selection_rect_ui.setBrush(gui.QColor(32, 32, 32, 70))
-                pen = gui.QPen(gui.QColor(234, 234, 234, 235), 2)
+                pen = gui.QPen(gui.QColor(255, 255, 255, 100), 1)
                 self._selection_rect_ui.setPen(pen)
             else:
                 self._selection_rect_ui.setRect(rect)

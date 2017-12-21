@@ -117,6 +117,12 @@ class AddEntryWindow(qt.QMainWindow):
         self.tool_features.setChecked(False)
         self.tool_save.setDisabled(self.editor_scene.entry is None)
 
+    def mouseMoveEvent(self, event: gui.QMouseEvent):
+        status = 'Pos(x: %d, y: %d) ScenePos(x: %d, y: %d)' % (event.pos().x(), event.pos().y(),
+                                                               self.editor_view.mapToScene(event.pos()).x(),
+                                                               self.editor_view.mapToScene(event.pos()).y())
+        self.statusBar().showMessage(status)
+
     def closeEvent(self, event):
         reply = qt.QMessageBox.question(self, 'Message',
                                         "You haven't saved the entry yet!<br>"

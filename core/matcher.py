@@ -38,8 +38,8 @@ class Matcher:
         matches = flann.knnMatch(src_des, target_des, k=2)
         # store all the good matches as per Lowe's ratio test.
         good = []
-        for m, n in filter(lambda match: len(match) == 2, matches):
-            if m.distance < 0.85 * n.distance:
+        for m, n in matches:
+            if m.distance < 0.7 * n.distance:
                 good.append(m)
         return good
 

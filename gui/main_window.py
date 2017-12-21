@@ -17,8 +17,7 @@ class MainWindow(qt.QMainWindow):
         super().__init__()
         self.database: Database = None
         self.matcher: Matcher = Matcher()
-        with open('dev.db', 'rb') as db:
-            self.database = Database.connect(db)
+        self.database = Database.connect('dev.db')
         self.configure_window()
         self.configure_menubar()
         self.__entryWindow = None

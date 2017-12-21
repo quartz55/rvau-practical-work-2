@@ -1,9 +1,11 @@
-from log import logger
 import pickle
-import numpy as np
-from typing import List, Optional
-from core import Image, Feature
 from cv2 import KeyPoint
+from typing import List, Optional
+
+import numpy as np
+
+from core import Image, Feature
+from log import logger
 
 
 class Entry:
@@ -29,8 +31,15 @@ class Database:
         self.__entries = dict()
 
     @classmethod
-    def connect(cls, file):
-        return pickle.load(file)
+    def connect(cls, filename):
+        try:
+            file = open(filename, 'rb')
+        except FileNotFoundError:
+            db = cls(filename)
+            db.save()
+            return db
+        else:
+            return pickle.load(file)
 
     def save(self):
         with open(self.filename, 'wb') as file:

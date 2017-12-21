@@ -4,7 +4,7 @@ from typing import Optional
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
-
+from PyQt5.QtCore import Qt
 from core import Image, Matcher, Entry, Database
 from gui.entry_editor_scene import EntryEditorScene, EntryEditorState
 from gui.entry_editor_view import EntryEditorView
@@ -27,7 +27,23 @@ class AddEntryWindow(qt.QMainWindow):
         self.editor_scene = EntryEditorScene()
         self.editor_scene.entry_changed.connect(self.on_entry_change)
         self.editor_view = EntryEditorView(self.editor_scene)
-        self.setCentralWidget(self.editor_view)
+
+        splitter = qt.QSplitter(Qt.Horizontal, self)
+        info_box = qt.QWidget(splitter)
+        form = qt.QFormLayout(info_box)
+        form.addRow(qt.QLabel('Name:', info_box), qt.QLineEdit(info_box))
+        group_combo = qt.QComboBox(info_box)
+        group_combo.setEditable(True)
+        group_combo.addItem("Taj Mahal")
+        group_combo.addItem("Westminster Abbey")
+        group_combo.setEditText('')
+        form.addRow(qt.QLabel('Group:', info_box), group_combo)
+        info_box.setLayout(form)
+
+        splitter.addWidget(self.editor_view)
+        splitter.addWidget(info_box)
+
+        self.setCentralWidget(splitter)
 
     def configure_window(self):
         self.setWindowTitle('New Database Entry')
@@ -79,8 +95,6 @@ class AddEntryWindow(qt.QMainWindow):
             return
         if state and len(self.editor_scene.features) == 0:
             eq = self.matcher.histogram_equalization(entry['img'])
-            hpf = self.matcher.highpass_filter(eq, 5)
-            laplace = self.matcher.laplacian_gradient(eq)
             features = self.matcher.features(eq)
             self.editor_scene.add_features(features)
         self.editor_scene.state = EntryEditorState.SELECT_FEATURES if state else EntryEditorState.NONE
@@ -118,9 +132,8 @@ class AddEntryWindow(qt.QMainWindow):
         self.tool_save.setDisabled(self.editor_scene.entry is None)
 
     def mouseMoveEvent(self, event: gui.QMouseEvent):
-        status = 'Pos(x: %d, y: %d) ScenePos(x: %d, y: %d)' % (event.pos().x(), event.pos().y(),
-                                                               self.editor_view.mapToScene(event.pos()).x(),
-                                                               self.editor_view.mapToScene(event.pos()).y())
+        status = '(x: %d, y: %d)' % (self.editor_view.mapToScene(event.pos()).x(),
+                                     self.editor_view.mapToScene(event.pos()).y())
         self.statusBar().showMessage(status)
 
     def closeEvent(self, event):

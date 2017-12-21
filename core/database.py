@@ -16,17 +16,11 @@ class Entry:
 
     @property
     def descriptors(self) -> np.ndarray:
-        des = []
-        for f in self.features:
-            des.append(f.descriptor)
-        return np.array(des)
+        return np.array([f.descriptor for f in self.features])
 
     @property
     def key_points(self) -> List[KeyPoint]:
-        kp = []
-        for f in self.features:
-            kp.append(f.key_point)
-        return kp
+        return [f.key_point for f in self.features]
 
 
 class Database:

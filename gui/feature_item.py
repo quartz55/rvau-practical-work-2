@@ -7,7 +7,7 @@ from core import Feature
 
 
 class FeatureItem(qt.QGraphicsItem):
-    def __init__(self, feature: Feature, diameter=5):
+    def __init__(self, feature: Feature, diameter=2.5):
         super().__init__()
         self.diameter = diameter
         self.feature: Feature = feature

@@ -79,6 +79,8 @@ class AddEntryWindow(qt.QMainWindow):
             return
         if state and len(self.editor_scene.features) == 0:
             eq = self.matcher.histogram_equalization(entry['img'])
+            hpf = self.matcher.highpass_filter(eq, 5)
+            laplace = self.matcher.laplacian_gradient(eq)
             features = self.matcher.features(eq)
             self.editor_scene.add_features(features)
         self.editor_scene.state = EntryEditorState.SELECT_FEATURES if state else EntryEditorState.NONE

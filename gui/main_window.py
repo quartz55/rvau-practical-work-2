@@ -1,8 +1,12 @@
 import os
 
+import cv2
+import numpy as np
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui)
 from PyQt5.QtCore import Qt
+from matplotlib import pyplot as plt
+
 from core import Database, Image, Matcher
 from gui import AddEntryWindow
 from log import logger
@@ -14,7 +18,7 @@ class MainWindow(qt.QMainWindow):
         self.database: Database = None
         self.matcher: Matcher = Matcher()
         with open('dev.db', 'rb') as db:
-                self.database = Database.connect(db)
+            self.database = Database.connect(db)
         self.configure_window()
         self.configure_menubar()
         self.__entryWindow = None
@@ -67,6 +71,17 @@ class MainWindow(qt.QMainWindow):
         if filename:
             image = Image.from_file(filename)
             image_eq = self.matcher.histogram_equalization(image)
+            image_hpf = self.matcher.highpass_filter(image_eq, 10)
+            image_laplace = self.matcher.laplacian_gradient(image_eq)
+            plt.subplot(221), plt.imshow(image.grayscale, 'gray')
+            plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+            plt.subplot(222), plt.imshow(image_eq.src, 'gray')
+            plt.title('Image after Histogram Equalization'), plt.xticks([]), plt.yticks([])
+            plt.subplot(223), plt.imshow(image_hpf.src, 'gray')
+            plt.title('Image after HP Filter'), plt.xticks([]), plt.yticks([])
+            plt.subplot(224), plt.imshow(image_laplace.src, 'gray')
+            plt.title('Image after Laplacian gradient'), plt.xticks([]), plt.yticks([])
+            plt.show()
             kp, des = self.matcher.features_raw(image_eq)
             for entry in self.database.entries:
                 logger.debug("Trying to match against '%s'", entry.name)
@@ -74,6 +89,18 @@ class MainWindow(qt.QMainWindow):
                 logger.debug("Found %d/10 matches", len(matches))
                 if len(matches) >= 10:
                     logger.info("Found a match in the database! (%s)", entry.name)
+                    src_pts = np.float32([entry.key_points[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+                    dst_pts = np.float32([kp[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+                    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                    matchesMask = mask.ravel().tolist()
+                    h, w, d = entry.img.dimensions
+                    pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+                    dst = cv2.perspectiveTransform(pts, M)
+                    image = Image(cv2.polylines(image.src, [np.int32(dst)], True, 255, 3, cv2.LINE_AA))
+                    img3 = Image(cv2.drawMatches(entry.img.src, entry.key_points, image.src, kp, matches, None,
+                                                 matchesMask=matchesMask, flags=2, matchColor=(0, 255, 0), singlePointColor=False))
+                    plt.imshow(img3.rgb)
+                    plt.show()
                     self.scene.clear()
                     h, w, d = image.dimensions
                     q_image = gui.QImage(image.rgb, w, h, w * d, gui.QImage.Format_RGB888)

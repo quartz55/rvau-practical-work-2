@@ -2,18 +2,20 @@ import cv2
 import os
 import numpy as np
 
-
+# classe para tratar a imagem
 class Image:
     def __init__(self, data):
-        assert type(data) is np.ndarray, 'Data must be a numpy compatible array'
+        #assert type(data) is np.ndarray, 'Data must be a numpy compatible array'
         self.src = data
         self.__grayscale = None
         self.__rgb = None
 
+    # carregamento da imagem
     @classmethod
     def from_file(cls, path):
         return cls(cv2.imread(path))
 
+    # numero de pixeis da imagem
     @property
     def dimensions(self):
         return np.shape(self.src)

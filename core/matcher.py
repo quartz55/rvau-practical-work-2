@@ -16,12 +16,13 @@ class Matcher:
         # sift = cv2.xfeatures2d.SIFT_create()
         # surf = cv2.xfeatures2d.SURF_create(100)
         self.__orb = cv2.ORB_create(nfeatures=1000)
-        self.__surf = cv2.xfeatures2d.SURF_create(300)
+        self.__surf = cv2.xfeatures2d.SURF_create(300) # criação do objeto SURF
 
     def features_raw(self, img: Image) -> Tuple[List[cv2.KeyPoint], np.ndarray]:
         # return self.__orb.detectAndCompute(img.src, None)
-        return self.__surf.detectAndCompute(img.src, None)
+        return self.__surf.detectAndCompute(img.src, None) # retorna os keypoints e os descriptors da imagem
 
+    # transforma os keypoints e os descriptors da retornados pela função anterior numa lista de Feature para permitir o tratamento de maneira mais detalhada
     def features(self, img: Image) -> List[Feature]:
         key_points, descriptors = self.features_raw(img)
         final = []

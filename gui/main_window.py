@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from matplotlib import pyplot as plt
 
 from core import Database, Image, Matcher
+from core.augments import AugmentType
 from gui import AddEntryWindow
 from log import logger
 
@@ -102,6 +103,18 @@ class MainWindow(qt.QMainWindow):
                     q_image = gui.QImage(image.rgb, w, h, w * d, gui.QImage.Format_RGB888)
                     item = self.scene.addPixmap(gui.QPixmap(q_image))
                     self.view.fitInView(item, Qt.KeepAspectRatio)
+                    # for augment in entry.augments:
+                    #     if augment.type is AugmentType.BOX:
+                    #         pen = gui.QPen()
+                    #         pen.setColor(Qt.red)
+                    #         pen.setWidth(5)
+                    #         rect = self.scene.addRect(augment.x, augment.y, augment.w, augment.h, pen)
+                    #         transform = gui.QTransform(*(matrix.reshape(-1)))
+                    #         rect.setTransform(rect.transform(). transform)
+                    rect = self.scene.addRect(5, 5, w-10, h-10, gui.QPen(Qt.red))
+                    transform = gui.QTransform(*(matrix.reshape(-1)))
+                    rect.setTransform(transform)
+                    self.update()
                     return
             info_box = qt.QMessageBox(self)
             info_box.setIcon(qt.QMessageBox.Warning)

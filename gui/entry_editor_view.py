@@ -8,11 +8,14 @@ from gui.entry_editor_scene import EntryEditorScene
 
 
 class EntryEditorView(qt.QGraphicsView):
+    mouse_moved = qtc.pyqtSignal(object)
+
     def __init__(self, scene: EntryEditorScene):
         super().__init__(scene)
         self.editor_scene = scene
         scene.entry_changed.connect(self.handle_entry_changed)
         self.viewport().grabGesture(Qt.PinchGesture)
+        self.viewport().setMouseTracking(True)
         self.setFrameStyle(0)
 
     def handle_entry_changed(self):
@@ -41,6 +44,11 @@ class EntryEditorView(qt.QGraphicsView):
         if event.type() == qtc.QEvent.Gesture:
             return self.gesture_event(event)
         return super().viewportEvent(event)
+
+    def mouseMoveEvent(self, event: gui.QMouseEvent):
+        scene_pos = self.mapToScene(event.pos())
+        self.mouse_moved.emit((scene_pos.x(), scene_pos.y()))
+        super().mouseMoveEvent(event)
 
     def gesture_event(self, event: qt.QGestureEvent) -> bool:
         pinch: qt.QPinchGesture = event.gesture(Qt.PinchGesture)

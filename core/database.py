@@ -5,6 +5,7 @@ from typing import List, Optional
 import numpy as np
 
 from core import Image, Feature
+from core.augments import Augment
 from log import logger
 
 
@@ -12,10 +13,11 @@ from log import logger
 # Ver o feature.py, image.py dentro desta pasta
 
 class Entry:
-    def __init__(self, name: str, image: Image, features: List[Feature], group=None):
+    def __init__(self, name: str, image: Image, features: List[Feature], augments: Optional[List[Augment]] = None,
+                 group=None):
         self.name = name
         self.img: Image = image
-        self.augments = []
+        self.augments = augments if augments is not None else []
         self.features = features
         self.group: Optional[str] = group
 

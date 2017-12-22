@@ -1,11 +1,11 @@
 import os
-from typing import Optional
-
+from typing import Optional, Tuple
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
                    QtCore as qtc)
-
+from PyQt5.QtCore import Qt
 from core import Image, Matcher, Entry, Database
+from core.augments import AugmentType
 from gui.entry_editor_scene import EntryEditorScene, EntryEditorState
 from gui.entry_editor_view import EntryEditorView
 from log import logger
@@ -27,13 +27,82 @@ class AddEntryWindow(qt.QMainWindow):
         self.editor_scene = EntryEditorScene()
         self.editor_scene.entry_changed.connect(self.on_entry_change)
         self.editor_view = EntryEditorView(self.editor_scene)
-        self.setCentralWidget(self.editor_view)
+        self.editor_view.mouse_moved.connect(self.on_mouse_move)
+        self.entry_name_combo: qt.QComboBox = None
+        self.entry_group_combo: qt.QComboBox = None
+        self.augments_group: qt.QButtonGroup = None
+        self.sidebar = self.create_sidebar()
+
+        splitter = qt.QSplitter(Qt.Horizontal, self)
+
+        splitter.addWidget(self.editor_view)
+        splitter.addWidget(self.sidebar)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+
+        self.setCentralWidget(splitter)
+
+    def create_sidebar(self) -> qt.QWidget:
+        sidebar = qt.QWidget()
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        area = qt.QScrollArea()
+        area.setFrameStyle(0)
+        content = qt.QWidget()
+        content_layout = qt.QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 5)
+
+        entries = self._database.entries
+        info_box = qt.QWidget()
+        form = qt.QFormLayout()
+        self.entry_name_combo = qt.QComboBox(info_box)
+        self.entry_name_combo.setEditable(True)
+        for e in entries:
+            self.entry_name_combo.addItem(e.name)
+        self.entry_name_combo.setEditText('')
+        form.addRow(qt.QLabel('Name:', info_box), self.entry_name_combo)
+        self.entry_group_combo = qt.QComboBox(info_box)
+        self.entry_group_combo.setEditable(True)
+        for e in entries:
+            self.entry_group_combo.addItem(e.group)
+        self.entry_group_combo.setEditText('')
+        form.addRow(qt.QLabel('Group:', info_box), self.entry_group_combo)
+        info_box.setLayout(form)
+        content_layout.addWidget(info_box)
+
+        self.augments_group = qt.QButtonGroup(self)
+        self.augments_group.setExclusive(False)
+        self.augments_group.buttonClicked[int].connect(self.augment_clicked)
+        augments_widget = qt.QWidget(sidebar)
+        augments_layout = qt.QGridLayout()
+
+        box_augment_widget, box_augment_button = self.toolbox_button("Box Augment", "Draws a box")
+        self.augments_group.addButton(box_augment_button, AugmentType.BOX.value)
+        augments_layout.addWidget(box_augment_widget, 0, 0)
+
+        #text_augment_widget, text_augment_button = self.toolbox_button("Text Augment", "Draws text")
+        #self.augments_group.addButton(text_augment_button, AugmentType.TEXT.value)
+        #augments_layout.addWidget(text_augment_widget, 0, 1)
+
+        augments_widget.setLayout(augments_layout)
+
+        toolbox = qt.QToolBox(sidebar)
+        toolbox.addItem(augments_widget, "Augments")
+        content_layout.addWidget(toolbox)
+
+        content_layout.setSizeConstraint(qt.QLayout.SetMinimumSize)
+        content.setLayout(content_layout)
+        area.setWidget(content)
+        layout.addWidget(area)
+        sidebar.setLayout(layout)
+        return sidebar
 
     def configure_window(self):
         self.setWindowTitle('New Database Entry')
         screen_size = gui.QGuiApplication.primaryScreen().availableSize()
         self.resize(int(screen_size.width() * 3 / 5), int(screen_size.height() * 3 / 5))
         self.grabGesture(qtc.Qt.PinchGesture)
+        self.statusBar().showMessage("Load an image to start")
 
     def configure_toolbar(self):
         self.toolbar = self.addToolBar('Main Toolbar')
@@ -79,14 +148,19 @@ class AddEntryWindow(qt.QMainWindow):
             return
         if state and len(self.editor_scene.features) == 0:
             eq = self.matcher.histogram_equalization(entry['img'])
-            hpf = self.matcher.highpass_filter(eq, 5)
-            laplace = self.matcher.laplacian_gradient(eq)
             features = self.matcher.features(eq)
             self.editor_scene.add_features(features)
         self.editor_scene.state = EntryEditorState.SELECT_FEATURES if state else EntryEditorState.NONE
         self.editor_scene.set_features_visibility(state)
 
     def save_entry(self):
+        name = self.entry_name_combo.currentText()
+        group = self.entry_group_combo.currentText()
+        if not name:
+            info_box = qt.QMessageBox(self)
+            info_box.setIcon(qt.QMessageBox.Critical)
+            info_box.setText("Name can't be empty!")
+            return info_box.exec()
         features = self.editor_scene.selected_features
         if len(features) < 10:
             info_box = qt.QMessageBox(self)
@@ -95,7 +169,10 @@ class AddEntryWindow(qt.QMainWindow):
             info_box.setInformativeText(
                 "You only selected %d feature%s" % (len(features), '' if len(features) == 1 else 's'))
             return info_box.exec()
-        entry = Entry('tmp', self.editor_scene.entry['img'], features, 'taj-mahal')
+        augments = [a.augment() for a in self.editor_scene.augments]
+        entry = Entry(name, self.editor_scene.entry['img'], features,
+                      augments=augments,
+                      group=group)
         self._database.add_entry(entry)
         info_box = qt.QMessageBox(self)
         info_box.setIcon(qt.QMessageBox.Information)
@@ -112,15 +189,56 @@ class AddEntryWindow(qt.QMainWindow):
         action.setToolTip(tooltip)
         return action
 
+    def toolbox_button(self,
+                       text: str,
+                       tooltip: Optional[str] = None,
+                       shortcut: Optional[str] = None) -> Tuple[qt.QWidget, qt.QToolButton]:
+        button = qt.QToolButton()
+        button.setText(text)
+        button.setCheckable(True)
+        button.setMinimumSize(50, 50)
+        tooltip = tooltip if tooltip is not None else text
+        if shortcut is not None:
+            button.setShortcut(shortcut)
+            tooltip += "<br><b>%s</b>" % button.shortcut().toString()
+        button.setToolTip(tooltip)
+
+        grid = qt.QGridLayout()
+        grid.addWidget(button, 0, 0, Qt.AlignCenter)
+        grid.addWidget(qt.QLabel("Box"), 1, 0, Qt.AlignCenter)
+        widget = qt.QWidget()
+        widget.setLayout(grid)
+        return widget, button
+
+    def augment_clicked(self, id: int):
+        augment = AugmentType(id)
+        clicked = self.augments_group.button(id)
+        for button in self.augments_group.buttons():
+            if clicked != button:
+                button.setChecked(False)
+
+        if clicked.isChecked():
+            logger.info("Changing augment to %s", augment.name)
+            self.select_features(False)
+            if augment is AugmentType.TEXT:
+                self.editor_scene.state = EntryEditorState.INSERT_AUGMENT_TEXT
+            else:
+                self.editor_scene.state = EntryEditorState.INSERT_AUGMENT_ITEM
+                self.editor_scene.augment_type = augment
+        else:
+            self.editor_scene.state = EntryEditorState.NONE
+
     def on_entry_change(self):
         self.tool_features.setDisabled(self.editor_scene.entry is None)
         self.tool_features.setChecked(False)
         self.tool_save.setDisabled(self.editor_scene.entry is None)
+        if self.editor_scene.entry is None:
+            self.statusBar().showMessage("Load an image to start")
 
-    def mouseMoveEvent(self, event: gui.QMouseEvent):
-        status = 'Pos(x: %d, y: %d) ScenePos(x: %d, y: %d)' % (event.pos().x(), event.pos().y(),
-                                                               self.editor_view.mapToScene(event.pos()).x(),
-                                                               self.editor_view.mapToScene(event.pos()).y())
+    def on_mouse_move(self, scene_position: Tuple[float, float]):
+        if self.editor_scene.entry is None:
+            return
+        status = '(x: {:d}, y: {:d})'.format(int(scene_position[0]), int(scene_position[1]))
         self.statusBar().showMessage(status)
 
     def closeEvent(self, event):
@@ -128,7 +246,6 @@ class AddEntryWindow(qt.QMainWindow):
                                         "You haven't saved the entry yet!<br>"
                                         "Are you sure you want to close?", qt.QMessageBox.Yes |
                                         qt.QMessageBox.No, qt.QMessageBox.No)
-
         if reply == qt.QMessageBox.Yes:
             event.accept()
         else:

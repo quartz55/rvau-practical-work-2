@@ -80,9 +80,9 @@ class AddEntryWindow(qt.QMainWindow):
         self.augments_group.addButton(box_augment_button, AugmentType.BOX.value)
         augments_layout.addWidget(box_augment_widget, 0, 0)
 
-        text_augment_widget, text_augment_button = self.toolbox_button("Text Augment", "Draws text")
-        self.augments_group.addButton(text_augment_button, AugmentType.TEXT.value)
-        augments_layout.addWidget(text_augment_widget, 0, 1)
+        #text_augment_widget, text_augment_button = self.toolbox_button("Text Augment", "Draws text")
+        #self.augments_group.addButton(text_augment_button, AugmentType.TEXT.value)
+        #augments_layout.addWidget(text_augment_widget, 0, 1)
 
         augments_widget.setLayout(augments_layout)
 
@@ -154,6 +154,13 @@ class AddEntryWindow(qt.QMainWindow):
         self.editor_scene.set_features_visibility(state)
 
     def save_entry(self):
+        name = self.entry_name_combo.currentText()
+        group = self.entry_group_combo.currentText()
+        if not name:
+            info_box = qt.QMessageBox(self)
+            info_box.setIcon(qt.QMessageBox.Critical)
+            info_box.setText("Name can't be empty!")
+            return info_box.exec()
         features = self.editor_scene.selected_features
         if len(features) < 10:
             info_box = qt.QMessageBox(self)
@@ -162,8 +169,10 @@ class AddEntryWindow(qt.QMainWindow):
             info_box.setInformativeText(
                 "You only selected %d feature%s" % (len(features), '' if len(features) == 1 else 's'))
             return info_box.exec()
-        entry = Entry(self.entry_name_combo.currentText(), self.editor_scene.entry['img'], features,
-                      self.entry_group_combo.currentText())
+        augments = [a.augment() for a in self.editor_scene.augments]
+        entry = Entry(name, self.editor_scene.entry['img'], features,
+                      augments=augments,
+                      group=group)
         self._database.add_entry(entry)
         info_box = qt.QMessageBox(self)
         info_box.setIcon(qt.QMessageBox.Information)

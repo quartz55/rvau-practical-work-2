@@ -34,14 +34,20 @@ class EntryEditorScene(qt.QGraphicsScene):
         self._selection_rect: dict = None
         self._selection_rect_ui: qt.QGraphicsRectItem = None
 
-        self.augments: List[AugmentItem] = []
+        self.augments: Set[AugmentItem] = set()
         self.augment_type: AugmentType = None
         self._dragging: AugmentItem = None
         self._selected: AugmentItem = None
 
+        self.delete_act = qt.QAction('Delete', self)
+        self.delete_act.setToolTip('Removes augment from scene')
+        self.delete_act.triggered.connect(self.delete_augment)
+
     def load_entry(self, img: Image):
         self.state = EntryEditorState.NONE
         self.features.clear()
+        self._selected = None
+        self._dragging = None
         self.clear()
         h, w, d = img.dimensions
         q_image = gui.QImage(img.rgb, w, h, w * d, gui.QImage.Format_RGB888)
@@ -74,6 +80,25 @@ class EntryEditorScene(qt.QGraphicsScene):
     def selected_features(self) -> List[Feature]:
         return [f.feature for f in self._selected_features]
 
+    def delete_augment(self):
+        if self._selected:
+            self.augments.remove(self._selected)
+            self.removeItem(self._selected)
+            self._selected = None
+            self.update()
+
+    def contextMenuEvent(self, event: qt.QGraphicsSceneContextMenuEvent):
+        item = self.itemAt(event.scenePos(), gui.QTransform())
+        item = item if item and isinstance(item, AugmentItem) else self._selected
+        if item:
+            self._selected = item
+            context_menu = qt.QMenu()
+            context_menu.addAction(self.delete_act)
+            context_menu.exec(event.screenPos())
+            event.accept()
+        else:
+            event.ignore()
+
     def mousePressEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if event.button() != Qt.LeftButton:
             return
@@ -85,14 +110,19 @@ class EntryEditorScene(qt.QGraphicsScene):
             if self.augment_type is AugmentType.BOX:
                 box_augment_item = BoxAugmentItem()
                 box_augment_item.setPos(pos)
-                self.augments.append(box_augment_item)
+                self.augments.add(box_augment_item)
                 self.addItem(box_augment_item)
         elif self.state is EntryEditorState.NONE:
-            items = [i for i in self.items(event.scenePos(), order=Qt.DescendingOrder) if isinstance(i, AugmentItem)]
-            logger.info("%d: %s", len(items), items)
-            if len(items) > 0:
-                item = items[0]
-                self._dragging = item
+            item = self.itemAt(event.scenePos(), gui.QTransform())
+            item = item if item and isinstance(item, AugmentItem) else None
+            self._dragging = item
+            if self._selected and item != self._selected:
+                self._selected.selected = False
+            self._selected = item
+            if self._selected:
+                self._selected.selected = True
+            self.update()
+        event.accept()
 
     def mouseReleaseEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if (self.state is EntryEditorState.SELECT_FEATURES and
@@ -119,9 +149,13 @@ class EntryEditorScene(qt.QGraphicsScene):
             self.removeItem(self._selection_rect_ui)
             self._selection_rect_ui = None
             self.update()
-        elif self.state is EntryEditorState.NONE and self._dragging is not None:
-            self._dragging.dragging = False
-            self._dragging = None
+        elif self.state is EntryEditorState.NONE:
+            if self._dragging:
+                self._dragging.dragging = False
+                self._dragging = None
+                self.update()
+
+        event.accept()
 
     def mouseMoveEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if self.state is EntryEditorState.SELECT_FEATURES and self._selection_rect is not None:
@@ -134,6 +168,8 @@ class EntryEditorScene(qt.QGraphicsScene):
             delta = (curr[0] - prev[0], curr[1] - prev[1])
             self._dragging.dragging = True
             self._dragging.moveBy(*delta)
+            self.update()
+        event.accept()
 
     def update_selection_rect(self):
         if self._selection_rect is not None:

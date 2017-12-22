@@ -11,6 +11,7 @@ class FeatureItem(qt.QGraphicsItem):
         super().__init__()
         self.diameter = diameter
         self.feature: Feature = feature
+        self.selected: bool = False
         self.setFlag(qt.QGraphicsItem.ItemIsSelectable)
         self.setCursor(qtc.Qt.PointingHandCursor)
 
@@ -20,7 +21,7 @@ class FeatureItem(qt.QGraphicsItem):
 
     def paint(self, painter: gui.QPainter, option: qt.QStyleOptionGraphicsItem, widget: typing.Optional[qt.QWidget] = ...):
         color = qtc.Qt.darkRed
-        if self.isSelected():
+        if self.selected:
             color = qtc.Qt.green
         painter.setBrush(color)
         painter.drawEllipse(self.boundingRect())

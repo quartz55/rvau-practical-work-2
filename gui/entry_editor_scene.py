@@ -1,5 +1,5 @@
 from log import logger
-from typing import List
+from typing import List, Optional, Set
 from enum import Enum, unique, auto
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
@@ -22,6 +22,7 @@ class EntryEditorScene(qt.QGraphicsScene):
         super().__init__()
         self.entry: dict = None
         self.features: List[FeatureItem] = []
+        self._selected_features: Set[FeatureItem] = set()
         self.state: EntryEditorState = EntryEditorState.NONE
         self._clicked: List[FeatureItem] = []
         self._selection_rect: dict = None
@@ -45,6 +46,7 @@ class EntryEditorScene(qt.QGraphicsScene):
         for f in self.features:
             self.removeItem(f)
         self.features.clear()
+        self._selected_features.clear()
         for f in features:
             feature_item = FeatureItem(f)
             feature_item.setPos(*feature_item.position)
@@ -59,11 +61,7 @@ class EntryEditorScene(qt.QGraphicsScene):
 
     @property
     def selected_features(self) -> List[Feature]:
-        selected = []
-        for i in self.selectedItems():
-            if type(i) is FeatureItem:
-                selected.append(i.feature)
-        return selected
+        return [f.feature for f in self._selected_features]
 
     def mousePressEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if event.button() == Qt.LeftButton:
@@ -71,7 +69,6 @@ class EntryEditorScene(qt.QGraphicsScene):
             if self.state == EntryEditorState.SELECT_FEATURES:
                 self._clicked = list(filter(lambda i: type(i) is FeatureItem, self.items(pos)))
                 self._selection_rect = {'from': (pos.x(), pos.y()), 'to': (pos.x(), pos.y())}
-                self.update_selection_rect()
 
     def mouseReleaseEvent(self, event: qt.QGraphicsSceneMouseEvent):
         if self._selection_rect is not None:
@@ -85,9 +82,14 @@ class EntryEditorScene(qt.QGraphicsScene):
             ctrl = event.modifiers() & Qt.ControlModifier
             shift = event.modifiers() & Qt.ShiftModifier
             if not ctrl:
-                self.clearSelection()
-            for selected in in_selection:
-                selected.setSelected(not shift)
+                self.clear_selected_features()
+            for item in in_selection:
+                if type(item) is FeatureItem:
+                    item.selected = not shift
+                    if not shift:
+                        self._selected_features.add(item)
+                    else:
+                        self._selected_features.remove(item)
             self._selection_rect = None
             self.removeItem(self._selection_rect_ui)
             self._selection_rect_ui = None
@@ -113,3 +115,8 @@ class EntryEditorScene(qt.QGraphicsScene):
                 self._selection_rect_ui.setPen(pen)
             else:
                 self._selection_rect_ui.setRect(rect)
+
+    def clear_selected_features(self):
+        for f in self._selected_features:
+            f.selected = False
+        self._selected_features.clear()

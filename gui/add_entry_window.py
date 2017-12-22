@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from core import Image, Matcher, Entry, Database
 from gui.entry_editor_scene import EntryEditorScene, EntryEditorState
 from gui.entry_editor_view import EntryEditorView
+from gui.feature_item import FeatureItem
 from log import logger
 
 
@@ -27,23 +28,56 @@ class AddEntryWindow(qt.QMainWindow):
         self.editor_scene = EntryEditorScene()
         self.editor_scene.entry_changed.connect(self.on_entry_change)
         self.editor_view = EntryEditorView(self.editor_scene)
+        self.editor_view.mouse_moved.connect(self.on_mouse_move)
+        self.entry_name_combo: qt.QComboBox = None
+        self.entry_group_combo: qt.QComboBox = None
+        self.toolbox = self.create_toolbox()
 
         splitter = qt.QSplitter(Qt.Horizontal, self)
-        info_box = qt.QWidget(splitter)
-        form = qt.QFormLayout(info_box)
-        form.addRow(qt.QLabel('Name:', info_box), qt.QLineEdit(info_box))
-        group_combo = qt.QComboBox(info_box)
-        group_combo.setEditable(True)
-        group_combo.addItem("Taj Mahal")
-        group_combo.addItem("Westminster Abbey")
-        group_combo.setEditText('')
-        form.addRow(qt.QLabel('Group:', info_box), group_combo)
-        info_box.setLayout(form)
 
         splitter.addWidget(self.editor_view)
-        splitter.addWidget(info_box)
+        splitter.addWidget(self.toolbox)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
 
         self.setCentralWidget(splitter)
+
+    def create_toolbox(self) -> qt.QWidget:
+        toolbox = qt.QWidget()
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        area = qt.QScrollArea()
+        area.setFrameStyle(0)
+        content = qt.QWidget()
+        content_layout = qt.QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 5)
+
+        entries = self._database.entries
+        info_box = qt.QWidget()
+        form = qt.QFormLayout()
+        self.entry_name_combo = qt.QComboBox(info_box)
+        self.entry_name_combo.setEditable(True)
+        for e in entries:
+            self.entry_name_combo.addItem(e.name)
+        self.entry_name_combo.setEditText('')
+        form.addRow(qt.QLabel('Name:', info_box), self.entry_name_combo)
+        self.entry_group_combo = qt.QComboBox(info_box)
+        self.entry_group_combo.setEditable(True)
+        for e in entries:
+            self.entry_group_combo.addItem(e.group)
+        self.entry_group_combo.setEditText('')
+        form.addRow(qt.QLabel('Group:', info_box), self.entry_group_combo)
+
+        info_box.setLayout(form)
+
+        content_layout.addWidget(info_box)
+
+        content_layout.setSizeConstraint(qt.QLayout.SetMinimumSize)
+        content.setLayout(content_layout)
+        area.setWidget(content)
+        layout.addWidget(area)
+        toolbox.setLayout(layout)
+        return toolbox
 
     def configure_window(self):
         self.setWindowTitle('New Database Entry')
@@ -109,7 +143,7 @@ class AddEntryWindow(qt.QMainWindow):
             info_box.setInformativeText(
                 "You only selected %d feature%s" % (len(features), '' if len(features) == 1 else 's'))
             return info_box.exec()
-        entry = Entry('tmp', self.editor_scene.entry['img'], features, 'taj-mahal')
+        entry = Entry(self.entry_name_combo.currentText(), self.editor_scene.entry['img'], features, self.entry_group_combo.currentText())
         self._database.add_entry(entry)
         info_box = qt.QMessageBox(self)
         info_box.setIcon(qt.QMessageBox.Information)
@@ -131,9 +165,8 @@ class AddEntryWindow(qt.QMainWindow):
         self.tool_features.setChecked(False)
         self.tool_save.setDisabled(self.editor_scene.entry is None)
 
-    def mouseMoveEvent(self, event: gui.QMouseEvent):
-        status = '(x: %d, y: %d)' % (self.editor_view.mapToScene(event.pos()).x(),
-                                     self.editor_view.mapToScene(event.pos()).y())
+    def on_mouse_move(self, scene_position: Tuple[float, float]):
+        status = '(x: {:d}, y: {:d})'.format(int(scene_position[0]), int(scene_position[1]))
         self.statusBar().showMessage(status)
 
     def closeEvent(self, event):

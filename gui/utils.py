@@ -11,8 +11,12 @@ def qimage_to_numpy(image: gui.QImage):
 
 
 def numpy_to_qimage(src: np.array):
-    h, w, d = src.shape
-    return gui.QImage(src, w, h, w * d, gui.QImage.Format_RGB888)
+    shape = src.shape
+    h, w = shape[0], shape[1]
+    d = 1
+    if len(shape) == 3:
+        d = shape[2]
+    return gui.QImage(src, w, h, w * d, gui.QImage.Format_RGB888 if d != 1 else gui.QImage.Format_Grayscale8)
 
 
 def image_to_qimage(image: Image):

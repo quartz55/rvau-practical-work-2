@@ -6,9 +6,10 @@ from PyQt5 import (QtWidgets as qt,
                    QtCore as qtc)
 from PyQt5.QtCore import Qt
 
+import math
 from core import Image, Feature
 from core.augments import AugmentType
-from gui.augment_items import AugmentItem, BoxAugmentItem
+from gui.augment_items import AugmentItem, BoxAugmentItem, ArrowAugmentItem, EllipseAugmentItem
 from gui.feature_item import FeatureItem
 
 
@@ -176,6 +177,28 @@ class EntryEditorScene(qt.QGraphicsScene):
                 box = self._item
                 box.width = event.scenePos().x() - self._item_start_point[0]
                 box.height = event.scenePos().y() - self._item_start_point[1]
+                self.update()
+            elif self.augment_type is AugmentType.ARROW and self._item_start_point:
+                if not self._item:
+                    self._item = ArrowAugmentItem(0)
+                    self._item.setPos(*self._item_start_point)
+                    self._item.drawing = True
+                    self.addItem(self._item)
+                arrow = self._item
+                vec = (event.scenePos().x() - self._item_start_point[0], event.scenePos().y() - self._item_start_point[1])
+                arrow.length = math.sqrt(pow(vec[0], 2) +
+                                         pow(vec[1], 2))
+                arrow.setRotation(math.degrees(math.atan2(vec[1], vec[0])))
+                self.update()
+            elif self.augment_type is AugmentType.ELLIPSE and self._item_start_point:
+                if not self._item:
+                    self._item = EllipseAugmentItem(0, 0)
+                    self._item.setPos(*self._item_start_point)
+                    self._item.drawing = True
+                    self.addItem(self._item)
+                ellipse = self._item
+                ellipse.width = event.scenePos().x() - self._item_start_point[0]
+                ellipse.height = event.scenePos().y() - self._item_start_point[1]
                 self.update()
         elif self.state is EntryEditorState.NONE and self._dragging is not None:
             curr = (event.scenePos().x(), event.scenePos().y())

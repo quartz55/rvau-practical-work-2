@@ -76,13 +76,17 @@ class AddEntryWindow(qt.QMainWindow):
         augments_widget = qt.QWidget(sidebar)
         augments_layout = qt.QGridLayout()
 
-        box_augment_widget, box_augment_button = self.toolbox_button("Box Augment", "Draws a box")
+        box_augment_widget, box_augment_button = self.toolbox_button("Box", "Draws a box")
         self.augments_group.addButton(box_augment_button, AugmentType.BOX.value)
         augments_layout.addWidget(box_augment_widget, 0, 0)
 
-        #text_augment_widget, text_augment_button = self.toolbox_button("Text Augment", "Draws text")
-        #self.augments_group.addButton(text_augment_button, AugmentType.TEXT.value)
-        #augments_layout.addWidget(text_augment_widget, 0, 1)
+        arrow_augment_widget, arrow_augment_button = self.toolbox_button("Arrow", "Draws an arrow")
+        self.augments_group.addButton(arrow_augment_button, AugmentType.ARROW.value)
+        augments_layout.addWidget(arrow_augment_widget, 0, 1)
+
+        ellipse_augment_widget, ellipse_augment_button = self.toolbox_button("Ellipse", "Draws an ellipse")
+        self.augments_group.addButton(ellipse_augment_button, AugmentType.ELLIPSE.value)
+        augments_layout.addWidget(ellipse_augment_widget, 1, 0)
 
         augments_widget.setLayout(augments_layout)
 
@@ -194,7 +198,7 @@ class AddEntryWindow(qt.QMainWindow):
                        tooltip: Optional[str] = None,
                        shortcut: Optional[str] = None) -> Tuple[qt.QWidget, qt.QToolButton]:
         button = qt.QToolButton()
-        button.setText(text)
+        button.setText(text + " Augment")
         button.setCheckable(True)
         button.setMinimumSize(50, 50)
         tooltip = tooltip if tooltip is not None else text
@@ -205,7 +209,7 @@ class AddEntryWindow(qt.QMainWindow):
 
         grid = qt.QGridLayout()
         grid.addWidget(button, 0, 0, Qt.AlignCenter)
-        grid.addWidget(qt.QLabel("Box"), 1, 0, Qt.AlignCenter)
+        grid.addWidget(qt.QLabel(text), 1, 0, Qt.AlignCenter)
         widget = qt.QWidget()
         widget.setLayout(grid)
         return widget, button

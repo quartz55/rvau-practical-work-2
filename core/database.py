@@ -31,6 +31,7 @@ class Entry:
     def key_points(self) -> List[KeyPoint]:
         return [f.key_point for f in self.features]
 
+
 # abstração onde se guarda o conjunto das Entry para se poder gerir uma base de dados
 class Database:
     def __init__(self, filename):
@@ -48,15 +49,23 @@ class Database:
             return db
         else:
             return pickle.load(file)
+
     # gravação do estado da base de dados para permitir que se reutilize as Entry
     def save(self):
         with open(self.filename, 'wb') as file:
             logger.info('Saving database: %s', self.filename)
             pickle.dump(self, file, pickle.HIGHEST_PROTOCOL)
+
     # inserir Entry na database
     def add_entry(self, entry: Entry):
         self.__entries[entry.name] = entry
         self.save()
+
+    def remove_entry(self, entry: Entry):
+        if self.__entries[entry.name]:
+            del self.__entries[entry.name]
+            self.save()
+
     # retornar o array de Entry
     @property
     def entries(self):

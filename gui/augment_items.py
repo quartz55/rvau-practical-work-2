@@ -13,7 +13,7 @@ class AugmentItem(qt.QGraphicsItem):
         self.type: AugmentType = type
         self._dragging: bool = False
         self._selected: bool = False
-
+        self._drawing: bool = False
         self.setCursor(Qt.PointingHandCursor)
 
     def augment(self) -> Augment:
@@ -36,12 +36,20 @@ class AugmentItem(qt.QGraphicsItem):
     def selected(self, value: bool):
         self._selected = value
 
+    @property
+    def drawing(self) -> bool:
+        return self._drawing
+
+    @drawing.setter
+    def drawing(self, value: bool):
+        self._drawing = value
+
 
 class BoxAugmentItem(AugmentItem):
-    def __init__(self, width: int = 100, height: int = 100):
+    def __init__(self, width: float = 100, height: float = 100):
         super().__init__(AugmentType.BOX)
-        self.width = width
-        self.height = height
+        self.width: float = width
+        self.height: float = height
 
     def boundingRect(self) -> qtc.QRectF:
         return qtc.QRectF(0, 0, self.width, self.height)
@@ -52,6 +60,8 @@ class BoxAugmentItem(AugmentItem):
             color.setAlphaF(0.7)
         if self._selected:
             color.setGreen(200)
+        if self._drawing:
+            color = gui.QColor(120, 32, 32, 100)
         pen = gui.QPen()
         pen.setColor(color)
         pen.setWidth(5)

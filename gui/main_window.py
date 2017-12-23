@@ -7,6 +7,7 @@ from PyQt5 import (QtWidgets as qt,
 from PyQt5.QtCore import Qt
 from matplotlib import pyplot as plt
 
+import gui.utils as utils
 from core import Database, Image, Matcher
 from core.augments import AugmentType
 from gui import AddEntryWindow
@@ -71,11 +72,11 @@ class MainWindow(qt.QMainWindow):
         if filename:
             image = Image.from_file(filename)
             image_eq = self.matcher.histogram_equalization(image)
-            plt.subplot(121), plt.imshow(image.grayscale, 'gray')
-            plt.title('Input Image'), plt.xticks([]), plt.yticks([])
-            plt.subplot(122), plt.imshow(image_eq.src, 'gray')
-            plt.title('Image after Histogram Equalization'), plt.xticks([]), plt.yticks([])
-            plt.show()
+            # plt.subplot(121), plt.imshow(image.grayscale, 'gray')
+            # plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+            # plt.subplot(122), plt.imshow(image_eq.src, 'gray')
+            # plt.title('Image after Histogram Equalization'), plt.xticks([]), plt.yticks([])
+            # plt.show()
             kp, des = self.matcher.features_raw(image_eq)
             for entry in self.database.entries:
                 logger.debug("Trying to match against '%s'", entry.name)
@@ -90,14 +91,17 @@ class MainWindow(qt.QMainWindow):
                     h, w, __ = entry.img.dimensions
                     pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
                     dst = cv2.perspectiveTransform(pts, matrix)
-                    image = Image(cv2.polylines(image.src, [np.int32(dst)], True, 255, 3, cv2.LINE_AA))
-                    img3 = Image(cv2.drawMatches(entry.img.src, entry.key_points, image.src, kp, matches,
-                                                 None,
-                                                 matchesMask=matches_mask,
-                                                 flags=2, matchColor=(0, 255, 0),
-                                                 singlePointColor=False))
-                    plt.imshow(img3.rgb)
-                    plt.show()
+                    # img_with_box = Image(cv2.polylines(image.src, [np.int32(dst)], True, 255, 3, cv2.LINE_AA))
+                    # match_res_img = Image(
+                    #     cv2.drawMatches(entry.img.src, entry.key_points, img_with_box.src, kp, matches,
+                    #                     None,
+                    #                     matchesMask=matches_mask,
+                    #                     flags=2, matchColor=(0, 255, 0),
+                    #                     singlePointColor=False))
+                    # plt.imshow(match_res_img.rgb)
+                    # plt.show()
+
+                    # Prepare augments
                     self.scene.clear()
                     for augment in entry.augments:
                         if augment.type is AugmentType.BOX:
@@ -105,20 +109,19 @@ class MainWindow(qt.QMainWindow):
                             pen.setColor(Qt.red)
                             pen.setWidth(5)
                             self.scene.addRect(augment.x, augment.y, augment.w, augment.h, pen)
+                    # Save augments to image
                     self.scene.setSceneRect(0, 0, w, h)
                     augments_image = gui.QImage(w, h, gui.QImage.Format_ARGB32)
                     augments_image.fill(Qt.transparent)
                     painter = gui.QPainter(augments_image)
                     self.scene.render(painter)
-                    ptr = augments_image.bits()
-                    ptr.setsize(w * h * 4)
-                    augments_wrapped = cv2.warpPerspective(np.array(ptr).reshape(h, w, 4), matrix, (w, h))
+                    painter.end()
+                    # Warp augments image based on homography matrix calculated above
+                    augments_wrapped = cv2.warpPerspective(utils.qimage_to_numpy(augments_image), matrix, (w, h))
                     augments_wrapped_image = gui.QImage(augments_wrapped, w, h, gui.QImage.Format_ARGB32)
-
+                    # Draw final result on screen
                     self.scene.clear()
-                    h, w, d = image.dimensions
-                    q_image = gui.QImage(image.rgb, w, h, w * d, gui.QImage.Format_RGB888)
-                    item = self.scene.addPixmap(gui.QPixmap(q_image))
+                    item = self.scene.addPixmap(gui.QPixmap(utils.image_to_qimage(image)))
                     self.scene.addPixmap(gui.QPixmap(augments_wrapped_image))
                     self.view.fitInView(item, Qt.KeepAspectRatio)
                     return

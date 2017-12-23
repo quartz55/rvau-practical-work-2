@@ -1,6 +1,5 @@
-from log import logger
 from enum import Enum, unique, auto
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from PyQt5 import (QtWidgets as qt,
                    QtGui as gui,
@@ -38,6 +37,8 @@ class EntryEditorScene(qt.QGraphicsScene):
         self.augment_type: AugmentType = None
         self._dragging: AugmentItem = None
         self._selected: AugmentItem = None
+        self._item_start_point: Tuple[float, float] = None
+        self._item: AugmentItem = None
 
         self.delete_act = qt.QAction('Delete', self)
         self.delete_act.setToolTip('Removes augment from scene')
@@ -107,11 +108,7 @@ class EntryEditorScene(qt.QGraphicsScene):
             self._clicked = list(filter(lambda i: type(i) is FeatureItem, self.items(pos)))
             self._selection_rect = {'from': (pos.x(), pos.y()), 'to': (pos.x(), pos.y())}
         elif self.state is EntryEditorState.INSERT_AUGMENT_ITEM:
-            if self.augment_type is AugmentType.BOX:
-                box_augment_item = BoxAugmentItem()
-                box_augment_item.setPos(pos)
-                self.augments.add(box_augment_item)
-                self.addItem(box_augment_item)
+            self._item_start_point = (pos.x(), pos.y())
         elif self.state is EntryEditorState.NONE:
             item = self.itemAt(event.scenePos(), gui.QTransform())
             item = item if item and isinstance(item, AugmentItem) else None
@@ -149,6 +146,13 @@ class EntryEditorScene(qt.QGraphicsScene):
             self.removeItem(self._selection_rect_ui)
             self._selection_rect_ui = None
             self.update()
+        elif self.state is EntryEditorState.INSERT_AUGMENT_ITEM:
+            if self._item:
+                self._item.drawing = False
+                self.augments.add(self._item)
+                self._item_start_point = None
+                self._item = None
+                self.update()
         elif self.state is EntryEditorState.NONE:
             if self._dragging:
                 self._dragging.dragging = False
@@ -162,6 +166,17 @@ class EntryEditorScene(qt.QGraphicsScene):
             new_x, new_y = event.scenePos().x(), event.scenePos().y()
             self._selection_rect['to'] = (new_x, new_y)
             self.update_selection_rect()
+        elif self.state is EntryEditorState.INSERT_AUGMENT_ITEM:
+            if self.augment_type is AugmentType.BOX and self._item_start_point:
+                if not self._item:
+                    self._item = BoxAugmentItem(0, 0)
+                    self._item.setPos(*self._item_start_point)
+                    self._item.drawing = True
+                    self.addItem(self._item)
+                box = self._item
+                box.width = event.scenePos().x() - self._item_start_point[0]
+                box.height = event.scenePos().y() - self._item_start_point[1]
+                self.update()
         elif self.state is EntryEditorState.NONE and self._dragging is not None:
             curr = (event.scenePos().x(), event.scenePos().y())
             prev = (event.lastScenePos().x(), event.lastScenePos().y())

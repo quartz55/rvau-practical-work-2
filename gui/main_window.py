@@ -87,7 +87,7 @@ class MainWindow(qt.QMainWindow):
                     dst_pts = np.float32([kp[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
                     matrix, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
                     matches_mask = mask.ravel().tolist()
-                    h, w, d = entry.img.dimensions
+                    h, w, __ = entry.img.dimensions
                     pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
                     dst = cv2.perspectiveTransform(pts, matrix)
                     image = Image(cv2.polylines(image.src, [np.int32(dst)], True, 255, 3, cv2.LINE_AA))
@@ -99,22 +99,28 @@ class MainWindow(qt.QMainWindow):
                     plt.imshow(img3.rgb)
                     plt.show()
                     self.scene.clear()
+                    for augment in entry.augments:
+                        if augment.type is AugmentType.BOX:
+                            pen = gui.QPen()
+                            pen.setColor(Qt.red)
+                            pen.setWidth(5)
+                            self.scene.addRect(augment.x, augment.y, augment.w, augment.h, pen)
+                    self.scene.setSceneRect(0, 0, w, h)
+                    augments_image = gui.QImage(w, h, gui.QImage.Format_ARGB32)
+                    augments_image.fill(Qt.transparent)
+                    painter = gui.QPainter(augments_image)
+                    self.scene.render(painter)
+                    ptr = augments_image.bits()
+                    ptr.setsize(w * h * 4)
+                    augments_wrapped = cv2.warpPerspective(np.array(ptr).reshape(h, w, 4), matrix, (w, h))
+                    augments_wrapped_image = gui.QImage(augments_wrapped, w, h, gui.QImage.Format_ARGB32)
+
+                    self.scene.clear()
                     h, w, d = image.dimensions
                     q_image = gui.QImage(image.rgb, w, h, w * d, gui.QImage.Format_RGB888)
                     item = self.scene.addPixmap(gui.QPixmap(q_image))
+                    self.scene.addPixmap(gui.QPixmap(augments_wrapped_image))
                     self.view.fitInView(item, Qt.KeepAspectRatio)
-                    # for augment in entry.augments:
-                    #     if augment.type is AugmentType.BOX:
-                    #         pen = gui.QPen()
-                    #         pen.setColor(Qt.red)
-                    #         pen.setWidth(5)
-                    #         rect = self.scene.addRect(augment.x, augment.y, augment.w, augment.h, pen)
-                    #         transform = gui.QTransform(*(matrix.reshape(-1)))
-                    #         rect.setTransform(rect.transform(). transform)
-                    rect = self.scene.addRect(5, 5, w-10, h-10, gui.QPen(Qt.red))
-                    transform = gui.QTransform(*(matrix.reshape(-1)))
-                    rect.setTransform(transform)
-                    self.update()
                     return
             info_box = qt.QMessageBox(self)
             info_box.setIcon(qt.QMessageBox.Warning)

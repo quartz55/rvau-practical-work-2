@@ -13,14 +13,12 @@ MIN_MATCH_COUNT = 10
 
 class Matcher:
     def __init__(self):
-        # sift = cv2.xfeatures2d.SIFT_create()
-        # surf = cv2.xfeatures2d.SURF_create(100)
-        self.__orb = cv2.ORB_create(nfeatures=1000)
-        self.__surf = cv2.xfeatures2d.SURF_create(300) # criação do objeto SURF
+        # self._orb = cv2.ORB_create(nfeatures=1000)
+        # self._surf = cv2.xfeatures2d.SURF_create(300)
+        self._sift = cv2.xfeatures2d.SIFT_create()
 
     def features_raw(self, img: Image) -> Tuple[List[cv2.KeyPoint], np.ndarray]:
-        # return self.__orb.detectAndCompute(img.src, None)
-        return self.__surf.detectAndCompute(img.src, None) # retorna os keypoints e os descriptors da imagem
+        return self._sift.detectAndCompute(img.src, None) # retorna os keypoints e os descriptors da imagem
 
     # transforma os keypoints e os descriptors da retornados pela função anterior numa lista de Feature para permitir o tratamento de maneira mais detalhada
     def features(self, img: Image) -> List[Feature]:
